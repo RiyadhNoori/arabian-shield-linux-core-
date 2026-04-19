@@ -1,0 +1,219 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    Arabian Shield Linux Core — GTK UI RTL Test
+    File: tests/test_rtl_ui.glade
+
+    Load with: gtk4-builder-tool preview tests/test_rtl_ui.glade
+    Or run the test app: python3 -c "
+        import gi; gi.require_version('Gtk','3.0')
+        from gi.repository import Gtk
+        b = Gtk.Builder(); b.add_from_file('tests/test_rtl_ui.glade')
+        w = b.get_object('main_window'); w.connect('destroy', Gtk.main_quit)
+        w.show_all(); Gtk.main()
+    "
+
+    This UI exercises:
+    - RTL container layout
+    - Arabic text in labels
+    - Mixed RTL/LTR text entry
+    - Correct button placement in RTL context
+    - Tooltips with Arabic text
+    - RTL tree view column ordering
+
+    SPDX-License-Identifier: GPL-3.0-or-later
+-->
+<interface>
+  <requires lib="gtk+" version="3.20"/>
+
+  <object class="GtkWindow" id="main_window">
+    <property name="title">اختبار واجهة المستخدم — Arabian Shield RTL Test</property>
+    <property name="default-width">700</property>
+    <property name="default-height">500</property>
+    <property name="border-width">12</property>
+
+    <!-- Force RTL direction on the window -->
+    <property name="direction">rtl</property>
+
+    <child>
+      <object class="GtkBox" id="main_vbox">
+        <property name="orientation">vertical</property>
+        <property name="spacing">12</property>
+        <property name="direction">rtl</property>
+
+        <!-- ── Header bar ──────────────────────────────────────── -->
+        <child>
+          <object class="GtkBox">
+            <property name="orientation">horizontal</property>
+            <property name="spacing">8</property>
+            <property name="direction">rtl</property>
+
+            <child>
+              <object class="GtkLabel" id="title_label">
+                <property name="label">اختبار الاتجاه من اليمين إلى اليسار</property>
+                <property name="xalign">1.0</property>
+                <style><class name="title-1"/></style>
+                <attributes>
+                  <attribute name="scale" value="1.4"/>
+                  <attribute name="weight" value="bold"/>
+                </attributes>
+              </object>
+              <packing><property name="expand">true</property></packing>
+            </child>
+
+            <child>
+              <object class="GtkLabel" id="subtitle_label">
+                <property name="label">Arabian Shield Linux Core</property>
+                <property name="xalign">0.0</property>
+              </object>
+            </child>
+          </object>
+        </child>
+
+        <!-- ── Search / text entry ────────────────────────────── -->
+        <child>
+          <object class="GtkFrame">
+            <property name="label">إدخال النص / Text Input</property>
+            <property name="direction">rtl</property>
+            <child>
+              <object class="GtkBox">
+                <property name="orientation">vertical</property>
+                <property name="spacing">8</property>
+                <property name="margin">8</property>
+                <property name="direction">rtl</property>
+
+                <!-- Arabic RTL entry -->
+                <child>
+                  <object class="GtkBox">
+                    <property name="orientation">horizontal</property>
+                    <property name="spacing">8</property>
+                    <property name="direction">rtl</property>
+                    <child>
+                      <object class="GtkLabel">
+                        <property name="label">عربي:</property>
+                        <property name="width-chars">8</property>
+                        <property name="xalign">1.0</property>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkEntry" id="arabic_entry">
+                        <property name="text">مرحبا بالعالم</property>
+                        <property name="direction">rtl</property>
+                        <property name="placeholder-text">أدخل نصاً عربياً هنا</property>
+                        <property name="tooltip-text">حقل إدخال للنص العربي</property>
+                        <property name="expand">true</property>
+                      </object>
+                      <packing><property name="expand">true</property></packing>
+                    </child>
+                  </object>
+                </child>
+
+                <!-- Mixed RTL+LTR entry -->
+                <child>
+                  <object class="GtkBox">
+                    <property name="orientation">horizontal</property>
+                    <property name="spacing">8</property>
+                    <property name="direction">rtl</property>
+                    <child>
+                      <object class="GtkLabel">
+                        <property name="label">مختلط:</property>
+                        <property name="width-chars">8</property>
+                        <property name="xalign">1.0</property>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkEntry" id="mixed_entry">
+                        <property name="text">النص 123 mixed text</property>
+                        <property name="tooltip-text">نص مختلط عربي وإنجليزي</property>
+                      </object>
+                      <packing><property name="expand">true</property></packing>
+                    </child>
+                  </object>
+                </child>
+
+                <!-- LTR entry in RTL context -->
+                <child>
+                  <object class="GtkBox">
+                    <property name="orientation">horizontal</property>
+                    <property name="spacing">8</property>
+                    <property name="direction">rtl</property>
+                    <child>
+                      <object class="GtkLabel">
+                        <property name="label">English:</property>
+                        <property name="width-chars">8</property>
+                        <property name="xalign">1.0</property>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkEntry" id="latin_entry">
+                        <property name="text">Latin text in RTL context</property>
+                        <property name="direction">ltr</property>
+                      </object>
+                      <packing><property name="expand">true</property></packing>
+                    </child>
+                  </object>
+                </child>
+              </object>
+            </child>
+          </object>
+        </child>
+
+        <!-- ── Sample text display ────────────────────────────── -->
+        <child>
+          <object class="GtkFrame">
+            <property name="label">عينات نصية / Text Samples</property>
+            <child>
+              <object class="GtkScrolledWindow">
+                <property name="min-content-height">120</property>
+                <child>
+                  <object class="GtkTextView" id="sample_textview">
+                    <property name="editable">false</property>
+                    <property name="wrap-mode">word-char</property>
+                    <property name="direction">rtl</property>
+                    <property name="margin">8</property>
+                    <!-- Populated at runtime by test script -->
+                    <child internal-child="buffer">
+                      <object class="GtkTextBuffer" id="sample_buffer">
+                        <property name="text">الجملة الأولى: مرحبا بالعالم!&#xA;&#xA;الجملة الثانية تحتوي على أرقام: ١٢٣ وأيضاً 456 معاً.&#xA;&#xA;Mixed: Hello مرحبا World — BiDi should work correctly here.</property>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+              </object>
+            </child>
+          </object>
+        </child>
+
+        <!-- ── Button row (in RTL, buttons flow right→left) ──── -->
+        <child>
+          <object class="GtkBox" id="button_row">
+            <property name="orientation">horizontal</property>
+            <property name="spacing">8</property>
+            <property name="direction">rtl</property>
+            <property name="halign">end</property>
+
+            <child>
+              <object class="GtkButton" id="btn_test">
+                <property name="label">اختبار / Test</property>
+                <property name="tooltip-text">تشغيل الاختبار</property>
+              </object>
+            </child>
+
+            <child>
+              <object class="GtkButton" id="btn_clear">
+                <property name="label">مسح / Clear</property>
+              </object>
+            </child>
+
+            <child>
+              <object class="GtkButton" id="btn_close">
+                <property name="label">إغلاق / Close</property>
+              </object>
+            </child>
+          </object>
+        </child>
+
+      </object>
+    </child>
+  </object>
+
+</interface>

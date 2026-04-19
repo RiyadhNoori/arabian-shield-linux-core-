@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<!--
+    Arabian Shield Linux Core — Baseline Alignment Visual Test
+    Open this file in a browser to visually inspect Arabic/Latin
+    baseline alignment in different rendering environments.
+
+    This test page intentionally uses no JavaScript framework.
+    It demonstrates the problem and Arabian Shield's fix side-by-side.
+
+    SPDX-License-Identifier: GPL-3.0-or-later
+-->
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Arabian Shield — Baseline Test</title>
+    <style>
+        :root {
+            --baseline-color: #e74c3c;
+            --capheight-color: #3498db;
+            --xheight-color: #2ecc71;
+            --bg: #1a1a2e;
+            --surface: #16213e;
+            --text: #eaeaea;
+            --pass: #2ecc71;
+            --warn: #f39c12;
+            --fail: #e74c3c;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: "Noto Sans Arabic", "DejaVu Sans", sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            padding: 2rem;
+            line-height: 1.6;
+        }
+
+        h1 { font-size: 1.8rem; margin-bottom: 0.5rem; color: #a8d8ea; }
+        h2 { font-size: 1.2rem; margin: 2rem 0 1rem; color: #a8d8ea; border-bottom: 1px solid #333; padding-bottom: 0.4rem; }
+        p  { margin-bottom: 1rem; color: #bbb; font-size: 0.95rem; }
+
+        .test-card {
+            background: var(--surface);
+            border: 1px solid #2a2a4a;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .test-label {
+            font-size: 0.75rem;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            color: #666;
+            margin-bottom: 0.75rem;
+        }
+
+        /* ── Baseline ruler ─────────────────────────────────────────────
+           Red line shows where the baseline should be.
+           All text in a line should sit ON this line (descenders below). */
+        .baseline-container {
+            position: relative;
+            padding: 1.5rem 0;
+            background: repeating-linear-gradient(
+                0deg,
+                transparent,
+                transparent 39px,
+                rgba(231, 76, 60, 0.3) 39px,
+                rgba(231, 76, 60, 0.3) 40px
+            );
+        }
+
+        .sample-text {
+            position: relative;
+            font-size: 2rem;
+            line-height: 1;
+        }
+
+        /* ── Test cases ─────────────────────────────────────────────── */
+
+        .case-broken {
+            /* Simulate a system WITHOUT Arabian Shield */
+            font-family: "DejaVu Sans", "Liberation Sans", sans-serif;
+            /* Arabic chars will fall back to a font with different baseline */
+        }
+
+        .case-fixed {
+            /* With Arabian Shield font priority applied */
+            font-family: "Noto Sans Arabic", "Noto Sans", "DejaVu Sans", sans-serif;
+        }
+
+        .case-amiri {
+            font-family: "Amiri", "Noto Naskh Arabic", serif;
+        }
+
+        /* ── Comparison grid ─────────────────────────────────────────── */
+        .compare-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+
+        @media (max-width: 600px) {
+            .compare-grid { grid-template-columns: 1fr; }
+        }
+
+        .compare-panel {
+            background: #0f0f1a;
+            border-radius: 6px;
+            padding: 1rem;
+        }
+
+        .panel-label {
+            font-size: 0.7rem;
+            font-family: monospace;
+            margin-bottom: 0.5rem;
+            padding: 0.2rem 0.5rem;
+            border-radius: 3px;
+            display: inline-block;
+        }
+
+        .label-broken { background: rgba(231,76,60,0.2); color: #e74c3c; }
+        .label-fixed  { background: rgba(46,204,113,0.2); color: #2ecc71; }
+
+        /* ── BiDi test ───────────────────────────────────────────────── */
+        .bidi-test {
+            direction: rtl;
+            unicode-bidi: embed;
+            text-align: start;
+        }
+
+        .bidi-test-ltr {
+            direction: ltr;
+            unicode-bidi: embed;
+        }
+
+        /* ── Ligature checker ────────────────────────────────────────── */
+        .ligature-row {
+            display: flex;
+            gap: 2rem;
+            align-items: baseline;
+            flex-wrap: wrap;
+        }
+
+        .ligature-item {
+            text-align: center;
+            padding: 1rem;
+            background: #0f0f1a;
+            border-radius: 6px;
+            min-width: 100px;
+        }
+
+        .ligature-glyph {
+            font-size: 3rem;
+            line-height: 1.2;
+            font-family: "Noto Sans Arabic", sans-serif;
+            display: block;
+        }
+
+        .ligature-label {
+            font-size: 0.65rem;
+            color: #666;
+            margin-top: 0.5rem;
+            font-family: monospace;
+        }
+
+        /* ── Status indicator ────────────────────────────────────────── */
+        .status-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+
+        .status-item {
+            padding: 0.5rem 0.75rem;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .status-ok   { background: rgba(46,204,113,0.1); border: 1px solid rgba(46,204,113,0.3); }
+        .status-warn { background: rgba(243,156,18,0.1);  border: 1px solid rgba(243,156,18,0.3); }
+        .status-fail { background: rgba(231,76,60,0.1);   border: 1px solid rgba(231,76,60,0.3); }
+
+        .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+        .dot-ok   { background: var(--pass); }
+        .dot-warn { background: var(--warn); }
+        .dot-fail { background: var(--fail); }
+
+        code { font-family: monospace; font-size: 0.85em; color: #a8d8ea; }
+    </style>
+</head>
+<body>
+
+<h1>Arabian Shield — Visual Rendering Test</h1>
+<p>اختبار بصري لجودة عرض الخطوط العربية ومحاذاة خط الأساس</p>
+<p style="direction:ltr">
+    This page tests Arabic font rendering quality in your browser.
+    Open browser DevTools → Console to see font detection results.
+</p>
+
+<!-- ── Section 1: Font availability ─────────────────────────────────── -->
+<h2>1. Font Availability / توافر الخطوط</h2>
+<div class="test-card">
+    <div class="status-grid" id="font-status">
+        <div class="status-item status-warn">
+            <div class="dot dot-warn"></div>
+            Checking fonts...
+        </div>
+    </div>
+</div>
+
+<!-- ── Section 2: Baseline alignment ────────────────────────────────── -->
+<h2>2. Baseline Alignment / محاذاة خط الأساس</h2>
+<p style="direction:ltr">
+    The red line marks the baseline. All letters should sit on or above it
+    (descenders go below). If Arabic floats above the line, baseline is broken.
+</p>
+
+<div class="test-card compare-grid">
+    <div class="compare-panel">
+        <span class="panel-label label-broken">Without fix (Latin fallback)</span>
+        <div class="baseline-container">
+            <div class="sample-text case-broken">
+                Hello مرحبا World ١٢٣
+            </div>
+        </div>
+    </div>
+    <div class="compare-panel">
+        <span class="panel-label label-fixed">With Arabian Shield fonts</span>
+        <div class="baseline-container">
+            <div class="sample-text case-fixed">
+                Hello مرحبا World ١٢٣
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ── Section 3: Ligatures ──────────────────────────────────────────── -->
+<h2>3. Required Ligatures / الحروف المركبة الإلزامية</h2>
+<p style="direction:ltr">
+    Arabic requires certain ligatures (merged letter forms). If OpenType shaping
+    is disabled, you will see two separate letters instead of the merged form.
+</p>
+<div class="test-card">
+    <div class="ligature-row">
+        <div class="ligature-item">
+            <span class="ligature-glyph">لا</span>
+            <div class="ligature-label">lam + alef → لا<br>Must be ONE glyph</div>
+        </div>
+        <div class="ligature-item">
+            <span class="ligature-glyph">لأ</span>
+            <div class="ligature-label">lam + alef with hamza<br>Must merge</div>
+        </div>
+        <div class="ligature-item">
+            <span class="ligature-glyph">لآ</span>
+            <div class="ligature-label">lam + alef with madda<br>Must merge</div>
+        </div>
+        <div class="ligature-item">
+            <span class="ligature-glyph">الله</span>
+            <div class="ligature-label">Allah ligature<br>(special form)</div>
+        </div>
+    </div>
+</div>
+
+<!-- ── Section 4: Positional forms ──────────────────────────────────── -->
+<h2>4. Positional Forms / الأشكال الموضعية للحروف</h2>
+<p style="direction:ltr">
+    Arabic letters change shape depending on their position in the word
+    (initial / medial / final / isolated). If shaping is broken, all letters
+    appear in their isolated form and look disconnected.
+</p>
+<div class="test-card">
+    <table style="width:100%; border-collapse: collapse; direction:ltr">
+        <thead>
+            <tr style="border-bottom: 1px solid #333;">
+                <th style="padding:0.5rem; text-align:left; color:#666">Letter</th>
+                <th style="padding:0.5rem; text-align:center">Isolated</th>
+                <th style="padding:0.5rem; text-align:center">Initial</th>
+                <th style="padding:0.5rem; text-align:center">Medial</th>
+                <th style="padding:0.5rem; text-align:center">Final</th>
+                <th style="padding:0.5rem; text-align:center">In a word</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr><td style="color:#666;padding:0.5rem">ب (ba)</td>
+                <td style="text-align:center;font-size:1.5rem">ب</td>
+                <td style="text-align:center;font-size:1.5rem">بـ</td>
+                <td style="text-align:center;font-size:1.5rem">ـبـ</td>
+                <td style="text-align:center;font-size:1.5rem">ـب</td>
+                <td style="text-align:center;font-size:1.5rem">كتب</td></tr>
+            <tr><td style="color:#666;padding:0.5rem">ع (ain)</td>
+                <td style="text-align:center;font-size:1.5rem">ع</td>
+                <td style="text-align:center;font-size:1.5rem">عـ</td>
+                <td style="text-align:center;font-size:1.5rem">ـعـ</td>
+                <td style="text-align:center;font-size:1.5rem">ـع</td>
+                <td style="text-align:center;font-size:1.5rem">معلم</td></tr>
+            <tr><td style="color:#666;padding:0.5rem">م (mim)</td>
+                <td style="text-align:center;font-size:1.5rem">م</td>
+                <td style="text-align:center;font-size:1.5rem">مـ</td>
+                <td style="text-align:center;font-size:1.5rem">ـمـ</td>
+                <td style="text-align:center;font-size:1.5rem">ـم</td>
+                <td style="text-align:center;font-size:1.5rem">قلم</td></tr>
+        </tbody>
+    </table>
+</div>
+
+<!-- ── Section 5: BiDi / Mixed text ──────────────────────────────────── -->
+<h2>5. Bidirectional Text / النص ثنائي الاتجاه</h2>
+<div class="test-card">
+    <p style="direction:ltr; font-size:0.85rem; color:#888; margin-bottom:1rem">
+        Each line should display in its natural direction. Check that numbers,
+        punctuation, and Latin words appear in the correct position.
+    </p>
+    <div style="display:grid; gap:1rem;">
+        <!-- RTL base paragraph -->
+        <div class="bidi-test" style="font-size:1.2rem; padding:0.5rem; background:#0f0f1a; border-radius:4px">
+            النص بالعربية ويحتوي على رقم 123 وكلمة English في المنتصف.
+        </div>
+        <!-- LTR base paragraph -->
+        <div class="bidi-test-ltr" style="font-size:1.2rem; padding:0.5rem; background:#0f0f1a; border-radius:4px">
+            English text containing Arabic: مرحبا بكم and more English.
+        </div>
+        <!-- Brackets test (must mirror in RTL) -->
+        <div class="bidi-test" style="font-size:1.2rem; padding:0.5rem; background:#0f0f1a; border-radius:4px">
+            النص (بين قوسين) يجب أن تتعكس الأقواس في الاتجاه الصحيح.
+        </div>
+    </div>
+</div>
+
+<!-- ── Section 6: Diacritics (Tashkeel) ──────────────────────────────── -->
+<h2>6. Diacritics / التشكيل</h2>
+<div class="test-card">
+    <div style="font-size:2rem; line-height:2; padding:0.5rem; font-family:'Amiri','Noto Naskh Arabic',serif">
+        <!-- Each of these should have diacritics ABOVE the letter, not displaced -->
+        الْعَرَبِيَّةُ الْفُصْحَى لُغَةٌ جَمِيلَةٌ
+    </div>
+    <p style="direction:ltr; font-size:0.8rem; color:#666; margin-top:0.5rem">
+        Diacritical marks (Tashkeel) should appear precisely above/below their
+        base letters. Displacement indicates a mark positioning bug.
+    </p>
+</div>
+
+<!-- ── Section 7: Amiri font test ────────────────────────────────────── -->
+<h2>7. Classical Serif (Amiri) / خط الأميري</h2>
+<div class="test-card">
+    <div class="case-amiri" style="font-size:1.8rem; line-height:1.8; direction:rtl; text-align:right">
+        بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ
+    </div>
+    <p style="direction:ltr; font-size:0.8rem; color:#666; margin-top:0.5rem">
+        Rendered with Amiri or Noto Naskh Arabic (serif style).
+        Ligatures and diacritics should be properly formed.
+    </p>
+</div>
+
+<script>
+// ── Font detection via Canvas ────────────────────────────────────────────
+function detectFont(family) {
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    const testText = '\u0645\u0631\u062D\u0628\u0627'; // مرحبا
+
+    ctx.font = `24px "${family}", monospace`;
+    const w1 = ctx.measureText(testText).width;
+    ctx.font = '24px monospace';
+    const w2 = ctx.measureText(testText).width;
+    return Math.abs(w1 - w2) > 1;
+}
+
+const fonts = [
+    { name: 'Noto Sans Arabic',  required: true  },
+    { name: 'Noto Naskh Arabic', required: false },
+    { name: 'Amiri',             required: false },
+    { name: 'Scheherazade New',  required: false },
+    { name: 'Cairo',             required: false },
+    { name: 'Vazirmatn',         required: false },
+];
+
+const container = document.getElementById('font-status');
+container.innerHTML = '';
+
+fonts.forEach(({ name, required }) => {
+    const found = detectFont(name);
+    const cls   = found ? 'status-ok' : (required ? 'status-fail' : 'status-warn');
+    const dot   = found ? 'dot-ok'    : (required ? 'dot-fail'    : 'dot-warn');
+    const label = found ? name        : `${name} — ${required ? 'MISSING (required)' : 'not installed (optional)'}`;
+    container.innerHTML += `
+        <div class="status-item ${cls}">
+            <div class="dot ${dot}"></div>
+            ${label}
+        </div>`;
+});
+</script>
+
+</body>
+</html>
