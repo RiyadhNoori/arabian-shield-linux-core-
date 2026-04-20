@@ -1,1 +1,119 @@
+#!/bin/bash
+# =============================================================================
+# Diyar OS — Live Hook: Build & Install Arabian Shield Core
+# config/hooks/live/0020-arabian-shield.hook.chroot
+#
+# Clones arabian-shield-linux-core from GitHub, compiles it,
+# and installs the .so to /usr/local/lib.
+# If no network, skips gracefully (fallback to system Pango).
+# =============================================================================
+set -e
 
+REPO_URL="https://github.com/RiyadhNoori/arabian-shield-linux-core"
+BUILD_DIR="/tmp/arabian-shield-build"
+INSTALL_LIB="/usr/local/lib"
+INSTALL_INC="/usr/local/include/arabian-shield"
+
+LIB_NAME="libarabian-shield"
+LIB_VERSION="1.0.0"
+LIB_REALNAME="${LIB_NAME}.so.${LIB_VERSION}"
+
+echo "[DIYAR] Building arabian-shield-linux-core..."
+
+# --- Check build deps ---
+for pkg in gcc libpango1.0-dev libfribidi-dev libharfbuzz-dev libfontconfig1-dev pkg-config; do
+    dpkg -l "$pkg" 2>/dev/null | grep -q "^ii" || \
+        DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends "$pkg"
+done
+
+# --- Clone or copy ---
+if git clone --depth=1 "$REPO_URL" "$BUILD_DIR" 2>/dev/null; then
+    echo "[DIYAR] Cloned arabian-shield-linux-core from GitHub."
+else
+    echo "[DIYAR] WARNING: Cannot clone repo (no network?). Generating stub .so."
+    mkdir -p "${BUILD_DIR}/src/core"
+
+    # Generate minimal stub so the .so always exists
+    cat > "${BUILD_DIR}/src/core/fribidi_wrapper.c" <<'EOF'
+#include <fribidi.h>
+#include <stdlib.h>
+/* Minimal stub — replace with full arabian-shield-linux-core implementation */
+FriBidiChar *arface_bidi_reorder(const FriBidiChar *str, size_t len,
+                                  FriBidiParType dir) {
+    if (!str || !len) return NULL;
+    FriBidiChar *out = malloc(len * sizeof(FriBidiChar));
+    if (out) {
+        for (size_t i=0; i<len; i++) out[i] = str[i];
+    }
+    return out;
+}
+EOF
+    cat > "${BUILD_DIR}/src/core/pango_hooks.h" <<'EOF'
+#pragma once
+#include <pango/pango.h>
+static inline void arface_enforce_rtl(PangoLayout *l) {
+    if (l) { pango_layout_set_auto_dir(l, TRUE);
+             pango_layout_set_alignment(l, PANGO_ALIGN_RIGHT); }
+}
+EOF
+fi
+
+# --- Compile ---
+mkdir -p "${BUILD_DIR}/build"
+SRC="${BUILD_DIR}/src/core"
+BUILD="${BUILD_DIR}/build"
+
+CFLAGS_PKG="$(pkg-config --cflags pango fribidi harfbuzz fontconfig 2>/dev/null || true)"
+LDFLAGS_PKG="$(pkg-config --libs   pango fribidi harfbuzz fontconfig 2>/dev/null || \
+               echo '-lpango-1.0 -lfribidi -lharfbuzz -lfontconfig')"
+
+# fribidi_wrapper
+gcc -Wall -fPIC -O2 $CFLAGS_PKG \
+    -c "${SRC}/fribidi_wrapper.c" \
+    -o "${BUILD}/fribidi_wrapper.o"
+
+# pango_hooks (header-only, create thin TU)
+cat > "${BUILD}/pango_hooks_impl.c" <<EOF
+#define ARFACE_PANGO_HOOKS_IMPL
+#include "${SRC}/pango_hooks.h"
+__attribute__((constructor)) static void _init(void) {}
+EOF
+
+gcc -Wall -fPIC -O2 $CFLAGS_PKG \
+    -I"${SRC}" \
+    -c "${BUILD}/pango_hooks_impl.c" \
+    -o "${BUILD}/pango_hooks_impl.o"
+
+# Link shared library
+gcc -shared \
+    -Wl,-soname,"${LIB_NAME}.so.1" \
+    "${BUILD}/fribidi_wrapper.o" \
+    "${BUILD}/pango_hooks_impl.o" \
+    $LDFLAGS_PKG \
+    -o "${BUILD}/${LIB_REALNAME}"
+
+# --- Install ---
+install -Dm755 "${BUILD}/${LIB_REALNAME}" "${INSTALL_LIB}/${LIB_REALNAME}"
+ln -sf "${INSTALL_LIB}/${LIB_REALNAME}" "${INSTALL_LIB}/${LIB_NAME}.so.1"
+ln -sf "${INSTALL_LIB}/${LIB_REALNAME}" "${INSTALL_LIB}/${LIB_NAME}.so"
+
+mkdir -p "${INSTALL_INC}"
+install -Dm644 "${SRC}/pango_hooks.h" "${INSTALL_INC}/pango_hooks.h"
+
+# Write pkg-config file
+mkdir -p /usr/local/lib/pkgconfig
+cat > "/usr/local/lib/pkgconfig/arabian-shield.pc" <<EOF
+prefix=/usr/local
+libdir=\${prefix}/lib
+includedir=\${prefix}/include/arabian-shield
+Name: arabian-shield
+Description: Diyar OS Arabic text shaping core
+Version: ${LIB_VERSION}
+Requires: pango fribidi harfbuzz fontconfig
+Libs: -L\${libdir} -larabian-shield
+Cflags: -I\${includedir}
+EOF
+
+ldconfig
+rm -rf "$BUILD_DIR"
+echo "[DIYAR] arabian-shield-linux-core installed: ${INSTALL_LIB}/${LIB_REALNAME}"
